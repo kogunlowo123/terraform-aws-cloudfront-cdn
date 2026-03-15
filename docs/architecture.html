@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>terraform-aws-cloudfront-cdn — Architecture</title>
+<style>
+:root{--ink:#0b0c0b;--paper:#f5f2eb;--accent:#c8420a;--accent2:#e8720c;--mono:'Courier New',monospace;--sans:system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:13px;line-height:1.7;padding:0}
+.container{max-width:1100px;margin:0 auto;padding:32px 48px}
+header{border-bottom:2px solid var(--accent);padding-bottom:24px;margin-bottom:32px}
+h1{font-size:28px;font-family:var(--sans);font-weight:700;letter-spacing:.02em}
+h1 em{font-style:normal;color:var(--accent)}
+.meta{font-size:10px;color:rgba(255,255,255,.4);margin-top:6px;letter-spacing:.05em}
+.badge{display:inline-block;font-size:9px;padding:2px 8px;border-radius:2px;margin-right:4px;letter-spacing:.04em}
+.badge-lang{background:rgba(200,66,10,.2);color:var(--accent);border:1px solid rgba(200,66,10,.4)}
+.badge-cloud{background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1)}
+.badge-cat{background:rgba(232,114,12,.15);color:var(--accent2);border:1px solid rgba(232,114,12,.3)}
+h2{font-size:16px;font-family:var(--sans);color:var(--accent);margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(200,66,10,.3);text-transform:uppercase;letter-spacing:.04em}
+h3{font-size:13px;font-family:var(--sans);color:var(--paper);margin:20px 0 8px}
+p,li{font-size:12px;line-height:1.8;color:rgba(255,255,255,.75)}
+ul{padding-left:20px;margin:8px 0}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:16px 0}
+.card{border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:16px;background:rgba(255,255,255,.02)}
+.card-label{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.card-value{font-size:14px;font-weight:700;color:var(--paper)}
+.diagram{border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:24px;margin:16px 0;background:rgba(255,255,255,.02);overflow-x:auto}
+.diagram svg{width:100%;height:auto}
+.flow-box{display:inline-block;border:1px solid var(--accent);border-radius:3px;padding:6px 14px;margin:4px;font-size:10px;color:var(--paper);background:rgba(200,66,10,.08)}
+.flow-arrow{color:var(--accent);margin:0 8px;font-size:14px}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:4px 0;font-size:11px}
+.checklist li::before{content:'&#10003; ';color:var(--accent);font-weight:bold}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}
+th{text-align:left;padding:8px;border-bottom:2px solid var(--accent);color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+td{padding:8px;border-bottom:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.7)}
+footer{margin-top:48px;padding-top:16px;border-top:2px solid var(--accent);font-size:9px;color:rgba(255,255,255,.3)}
+footer a{color:var(--accent);text-decoration:none}
+@media print{body{background:#fff;color:#000}h2{color:#c8420a}.card{border-color:#ccc}}
+@media(max-width:768px){.container{padding:16px}.card-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>terraform-aws-cloudfront-cdn <em>Architecture</em></h1>
+  <div class="meta">
+    <span class="badge badge-lang">HCL / Terraform</span>
+    <span class="badge badge-cloud">AWS</span>
+    <span class="badge badge-cat">Infrastructure / IaC</span>
+  </div>
+</header>
+
+<!-- 1. Executive Summary -->
+<h2>Executive Summary</h2>
+<p>
+  This module deploys a production-ready Amazon CloudFront CDN distribution with multi-origin support (S3 and ALB), Origin Access Control for secure S3 access, custom cache policies with Brotli/Gzip compression, security response headers (HSTS, X-Frame-Options, XSS Protection), CloudFront Functions and Lambda@Edge for edge compute, WAF integration, geo restrictions, custom error responses for SPA routing, Route 53 DNS alias records, and S3 access logging. It enables organizations to deliver content globally with low latency, strong security headers, and edge-level programmability.
+</p>
+
+<!-- 2. Overview Cards -->
+<h2>Overview</h2>
+<div class="card-grid">
+  <div class="card">
+    <div class="card-label">Resources Created</div>
+    <div class="card-value">7</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Variables Count</div>
+    <div class="card-value">20</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Outputs Count</div>
+    <div class="card-value">9</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Provider</div>
+    <div class="card-value">hashicorp/aws</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Terraform Version</div>
+    <div class="card-value">&gt;= 1.5.0</div>
+  </div>
+</div>
+
+<!-- 3. Architecture Diagram -->
+<h2>Architecture Diagram</h2>
+<div class="diagram">
+  <div style="text-align:center">
+    <span class="flow-box">End Users (Global)</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-box">Route 53 DNS</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-box">CloudFront Distribution</span>
+    <br/><br/>
+    <span class="flow-box">CloudFront</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-box">AWS WAF Web ACL</span>
+    <br/><br/>
+    <span class="flow-box">Viewer Request</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-box">CloudFront Function</span>
+    &nbsp;&nbsp;
+    <span class="flow-box">Edge Events</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-box">Lambda@Edge</span>
+    <br/><br/>
+    <span class="flow-box">CloudFront</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-box">Cache Policy (Brotli + Gzip)</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-box">Response Headers Policy</span>
+    <br/><br/>
+    <span class="flow-box">Origin Access Control</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-box">S3 Bucket Origin</span>
+    &nbsp;&nbsp;
+    <span class="flow-box">Custom Origin</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-box">ALB Origin (TLS 1.2)</span>
+    <br/><br/>
+    <span class="flow-box">CloudFront</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-box">S3 Access Logs</span>
+    &nbsp;&nbsp;
+    <span class="flow-box">Errors (403/404)</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-box">Custom Error Pages (SPA)</span>
+  </div>
+</div>
+
+<!-- 4. Component Breakdown -->
+<h2>Component Breakdown</h2>
+<table>
+  <thead>
+    <tr><th>Resource</th><th>Type</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>aws_cloudfront_distribution.this</td><td>Distribution</td><td>Global CDN distribution with S3 and ALB origins, cache behavior, and TLS</td></tr>
+    <tr><td>aws_cloudfront_origin_access_control.this</td><td>OAC</td><td>SigV4-signed requests for secure S3 origin access (replaces OAI)</td></tr>
+    <tr><td>aws_cloudfront_cache_policy.this</td><td>Cache Policy</td><td>Configurable TTL with Brotli and Gzip compression enabled</td></tr>
+    <tr><td>aws_cloudfront_response_headers_policy.this</td><td>Response Headers</td><td>Security headers (HSTS, X-Frame-Options, XSS, nosniff) and CORS</td></tr>
+    <tr><td>aws_cloudfront_function.this</td><td>CF Function</td><td>Lightweight viewer request handling (cloudfront-js-2.0 runtime)</td></tr>
+    <tr><td>aws_cloudfront_distribution (lambda_edge)</td><td>Lambda@Edge</td><td>Advanced edge compute for viewer/origin request/response events</td></tr>
+    <tr><td>aws_route53_record.this</td><td>DNS Record</td><td>Route 53 alias A records pointing to the CloudFront distribution</td></tr>
+  </tbody>
+</table>
+
+<!-- 5. Data Flow -->
+<h2>Data Flow</h2>
+<ol>
+  <li>User's browser resolves the custom domain via Route 53, which returns the CloudFront distribution domain as an alias.</li>
+  <li>The request hits the nearest CloudFront edge location (POP).</li>
+  <li>AWS WAF (if configured) inspects the request for DDoS, bot, and injection attacks.</li>
+  <li>Geo restriction rules check the user's country against the whitelist/blacklist.</li>
+  <li>CloudFront Function executes on viewer-request for URL rewrites, redirects, or header manipulation.</li>
+  <li>The cache policy checks if a cached response exists (based on TTL, headers, cookies, query strings).</li>
+  <li>On cache miss, CloudFront forwards to the origin: S3 via OAC (SigV4 signed) or ALB via HTTPS (TLS 1.2).</li>
+  <li>Lambda@Edge functions (if configured) can transform origin requests/responses.</li>
+  <li>The response headers policy injects security headers (HSTS, X-Content-Type-Options, X-Frame-Options, X-XSS-Protection) and CORS headers.</li>
+  <li>For 403/404 errors, custom error responses serve the SPA index.html with a 200 status code.</li>
+  <li>The response is cached at the edge and returned to the user with Brotli or Gzip compression.</li>
+  <li>Access logs are written to S3 for analysis.</li>
+</ol>
+
+<!-- 6. Security Controls -->
+<h2>Security Controls</h2>
+<ul>
+  <li><strong>Origin Access Control (OAC)</strong> &mdash; SigV4-signed requests replace legacy OAI, ensuring only CloudFront can access the S3 origin.</li>
+  <li><strong>TLS 1.2 Enforcement</strong> &mdash; Minimum protocol version TLSv1.2_2021 for viewer connections; TLS 1.2 for ALB origins.</li>
+  <li><strong>HTTPS Redirect</strong> &mdash; <code>viewer_protocol_policy = "redirect-to-https"</code> forces all traffic to HTTPS.</li>
+  <li><strong>HSTS Headers</strong> &mdash; Configurable Strict-Transport-Security with preload and includeSubdomains.</li>
+  <li><strong>X-Frame-Options</strong> &mdash; Default DENY prevents clickjacking attacks.</li>
+  <li><strong>X-Content-Type-Options</strong> &mdash; nosniff header prevents MIME type sniffing.</li>
+  <li><strong>XSS Protection</strong> &mdash; X-XSS-Protection header with mode=block.</li>
+  <li><strong>WAF Integration</strong> &mdash; AWS WAF Web ACL for DDoS mitigation, bot management, and IP reputation.</li>
+  <li><strong>Geo Restriction</strong> &mdash; Whitelist or blacklist countries for content access.</li>
+  <li><strong>CORS Policy</strong> &mdash; Configurable allowed origins, methods, and headers.</li>
+  <li><strong>IPv6 Enabled</strong> &mdash; Dual-stack support for modern network compatibility.</li>
+</ul>
+
+<!-- 7. Industry Adaptation -->
+<h2>Industry Adaptation</h2>
+<table>
+  <thead>
+    <tr><th>Industry</th><th>Use Case</th><th>Key Features Leveraged</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Healthcare</td><td>Patient portal static assets with HIPAA-compliant headers</td><td>HSTS, OAC, WAF, access logging, HTTPS-only</td></tr>
+    <tr><td>Finance</td><td>Banking web app with strict security headers</td><td>Security headers policy, WAF, geo restriction, TLS 1.2</td></tr>
+    <tr><td>Government</td><td>Citizen-facing portal with country-level access control</td><td>Geo restriction whitelist, OAC, security headers, WAF</td></tr>
+    <tr><td>Retail</td><td>Global e-commerce storefront with SPA routing</td><td>Custom error responses, cache policy, Brotli compression, Lambda@Edge</td></tr>
+    <tr><td>SaaS</td><td>Multi-tenant frontend with custom domains per customer</td><td>Multiple domain aliases, Route 53 records, CloudFront Functions</td></tr>
+  </tbody>
+</table>
+
+<!-- 8. Production Readiness Checklist -->
+<h2>Production Readiness Checklist</h2>
+<ul class="checklist">
+  <li>Configure custom domain names with ACM certificate (<code>acm_certificate_arn</code>)</li>
+  <li>Set up Route 53 alias records (<code>route53_zone_id</code>)</li>
+  <li>Enable WAF Web ACL (<code>waf_web_acl_id</code>) for DDoS and bot protection</li>
+  <li>Configure response headers policy with security headers (HSTS, X-Frame-Options)</li>
+  <li>Enable access logging (<code>enable_logging = true</code>) for audit trails</li>
+  <li>Set appropriate cache TTLs for your content type (static vs. dynamic)</li>
+  <li>Configure custom error responses for SPA routing (403/404 to index.html)</li>
+  <li>Use <code>PriceClass_100</code> or <code>PriceClass_200</code> to control costs by region</li>
+  <li>Configure geo restrictions if content is region-specific</li>
+  <li>Use OAC (not OAI) for S3 origin access -- module uses OAC by default</li>
+  <li>Enable Brotli and Gzip compression (enabled by default in cache policy)</li>
+  <li>Test custom error responses and CloudFront Functions before production</li>
+</ul>
+
+<!-- 9. Configuration Reference -->
+<h2>Configuration Reference</h2>
+<table>
+  <thead>
+    <tr><th>Variable</th><th>Type</th><th>Description</th><th>Default</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>project_name</td><td>string</td><td>Name of the project, used for resource naming</td><td><em>required</em></td></tr>
+    <tr><td>environment</td><td>string</td><td>Environment name (e.g., dev, staging, prod)</td><td>"prod"</td></tr>
+    <tr><td>domain_names</td><td>list(string)</td><td>List of domain names (CNAMEs) for the distribution</td><td>[]</td></tr>
+    <tr><td>acm_certificate_arn</td><td>string</td><td>ARN of the ACM certificate for HTTPS</td><td>null</td></tr>
+    <tr><td>s3_origin_bucket</td><td>object</td><td>S3 bucket origin (domain name, bucket ID)</td><td>null</td></tr>
+    <tr><td>alb_origin</td><td>object</td><td>ALB origin (domain, ports, protocol)</td><td>null</td></tr>
+    <tr><td>default_root_object</td><td>string</td><td>Default root object</td><td>"index.html"</td></tr>
+    <tr><td>price_class</td><td>string</td><td>CloudFront price class</td><td>PriceClass_100</td></tr>
+    <tr><td>min_ttl</td><td>number</td><td>Minimum cache TTL in seconds</td><td>0</td></tr>
+    <tr><td>default_ttl</td><td>number</td><td>Default cache TTL in seconds</td><td>3600</td></tr>
+    <tr><td>max_ttl</td><td>number</td><td>Maximum cache TTL in seconds</td><td>86400</td></tr>
+    <tr><td>waf_web_acl_id</td><td>string</td><td>WAF Web ACL ID</td><td>null</td></tr>
+    <tr><td>lambda_edge_functions</td><td>list(object)</td><td>Lambda@Edge function associations</td><td>[]</td></tr>
+    <tr><td>cloudfront_function_code</td><td>string</td><td>CloudFront function code for viewer requests</td><td>null</td></tr>
+    <tr><td>geo_restriction_type</td><td>string</td><td>Geo restriction type: none, whitelist, blacklist</td><td>"none"</td></tr>
+    <tr><td>response_headers_policy</td><td>object</td><td>Security headers and CORS configuration</td><td>null</td></tr>
+    <tr><td>custom_error_responses</td><td>list(object)</td><td>Custom error response configurations</td><td>[403, 404 SPA defaults]</td></tr>
+    <tr><td>enable_logging</td><td>bool</td><td>Enable access logging</td><td>false</td></tr>
+    <tr><td>route53_zone_id</td><td>string</td><td>Route 53 hosted zone ID for DNS records</td><td>null</td></tr>
+    <tr><td>tags</td><td>map(string)</td><td>Tags to apply to all resources</td><td>{}</td></tr>
+  </tbody>
+</table>
+
+<!-- 10. Deployment -->
+<h2>Deployment</h2>
+<h3>Quick Start</h3>
+<pre style="background:rgba(255,255,255,.04);padding:16px;border-radius:4px;overflow-x:auto;color:rgba(255,255,255,.7);font-size:11px">
+module "cloudfront_cdn" {
+  source = "github.com/kogunlowo123/terraform-aws-cloudfront-cdn"
+
+  project_name = "my-website"
+  environment  = "prod"
+
+  s3_origin_bucket = {
+    bucket_regional_domain_name = aws_s3_bucket.website.bucket_regional_domain_name
+    bucket_id                   = aws_s3_bucket.website.id
+  }
+
+  domain_names        = ["cdn.example.com"]
+  acm_certificate_arn = aws_acm_certificate.cdn.arn
+  route53_zone_id     = aws_route53_zone.main.zone_id
+}
+</pre>
+<h3>Commands</h3>
+<pre style="background:rgba(255,255,255,.04);padding:16px;border-radius:4px;overflow-x:auto;color:rgba(255,255,255,.7);font-size:11px">
+terraform init      # Initialize providers and modules
+terraform plan      # Preview infrastructure changes
+terraform apply     # Deploy the CloudFront CDN
+terraform destroy   # Tear down all resources
+</pre>
+
+<!-- 11. Links -->
+<h2>Links</h2>
+<ul>
+  <li><a href="https://github.com/kogunlowo123/terraform-aws-cloudfront-cdn" style="color:var(--accent)">GitHub Repository</a></li>
+  <li><a href="https://github.com/kogunlowo123/terraform-aws-cloudfront-cdn/blob/main/README.md" style="color:var(--accent)">README</a></li>
+  <li><a href="https://github.com/kogunlowo123/terraform-aws-cloudfront-cdn/tree/main/examples" style="color:var(--accent)">Examples</a></li>
+  <li><a href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution" style="color:var(--accent)">AWS Provider: aws_cloudfront_distribution</a></li>
+</ul>
+
+<footer>
+  <a href="https://github.com/kogunlowo123/terraform-aws-cloudfront-cdn">terraform-aws-cloudfront-cdn</a> &middot; Generated 2026-03-15 &middot; Kehinde Ogunlowo
+</footer>
+</div>
+</body>
+</html>
