@@ -1,12 +1,6 @@
-variable "project_name" {
-  description = "Name of the project, used for resource naming"
+variable "name" {
+  description = "Name prefix for all resources"
   type        = string
-}
-
-variable "environment" {
-  description = "Environment name (e.g., dev, staging, prod)"
-  type        = string
-  default     = "prod"
 }
 
 variable "domain_names" {
@@ -22,7 +16,7 @@ variable "acm_certificate_arn" {
 }
 
 variable "s3_origin_bucket" {
-  description = "S3 bucket for the primary origin"
+  description = "S3 bucket configuration for the primary origin"
   type = object({
     bucket_regional_domain_name = string
     bucket_id                   = string
@@ -55,19 +49,19 @@ variable "price_class" {
 }
 
 variable "min_ttl" {
-  description = "Minimum TTL for cached objects"
+  description = "Minimum TTL for cached objects in seconds"
   type        = number
   default     = 0
 }
 
 variable "default_ttl" {
-  description = "Default TTL for cached objects"
+  description = "Default TTL for cached objects in seconds"
   type        = number
   default     = 3600
 }
 
 variable "max_ttl" {
-  description = "Maximum TTL for cached objects"
+  description = "Maximum TTL for cached objects in seconds"
   type        = number
   default     = 86400
 }
@@ -101,7 +95,7 @@ variable "waf_web_acl_id" {
 }
 
 variable "lambda_edge_functions" {
-  description = "Lambda@Edge function associations"
+  description = "Lambda@Edge function associations for the default cache behavior"
   type = list(object({
     event_type   = string
     lambda_arn   = string
