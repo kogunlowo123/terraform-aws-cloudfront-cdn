@@ -1,3 +1,9 @@
+![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.5-blueviolet?logo=terraform)
+![AWS](https://img.shields.io/badge/AWS-FF9900?logo=amazonaws&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+![CI](https://img.shields.io/github/actions/workflow/status/kogunlowo123/terraform-aws-cloudfront-cdn/terraform-ci.yml?label=CI)
+![GitHub release](https://img.shields.io/github/v/release/kogunlowo123/terraform-aws-cloudfront-cdn)
+
 # terraform-aws-cloudfront-cdn
 
 A production-ready Terraform module for deploying Amazon CloudFront CDN distributions with S3 and ALB origins, Origin Access Control, custom error responses, WAF integration, and Lambda@Edge support.
